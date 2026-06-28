@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, inject, h, defineComponent, resolveComponent, provide, type Component, type Ref } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, inject, h, defineComponent, resolveComponent, provide, type Component, type Ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import { getDashboard } from '@/api/dashboards'
@@ -12,7 +12,7 @@ import { GRID_COLS, ROW_HEIGHT_PX } from '@/config/grid'
 const ROW_HEIGHT_PX_STR = `${ROW_HEIGHT_PX}px`
 
 const route = useRoute()
-const dashboardId = Number(route.params.id as string)
+const dashboardId = computed(() => Number(route.params.id as string))
 
 const dashboard = ref<Dashboard | null>(null)
 const charts = ref<Map<number, ChartDefinition>>(new Map())
@@ -59,12 +59,22 @@ onUnmounted(() => {
   dynamicTitle.value = ''
 })
 
-onMounted(async () => {
+watch(dashboardId, () => {
+  loadDashboard()
+}, { immediate: true })
+
+async function loadDashboard() {
   loading.value = true
+  charts.value = new Map()
   try {
-    dashboard.value = await getDashboard(dashboardId)
+    const id = dashboardId.value
+    if (!id) return
+    dashboard.value = await getDashboard(id)
     dynamicTitle.value = dashboard.value.name
-    // Initialize filter defaults
+    // Clear old filter values and set defaults
+    for (const k of Object.keys(filterValues)) {
+      delete filterValues[k]
+    }
     for (const f of dashboard.value.global_filters) {
       filterValues[f.key] = f.default_value
     }
@@ -79,8 +89,10 @@ onMounted(async () => {
         }
       } catch { /* silently ignore */ }
     }
+  } catch {
+    dashboard.value = null
   } finally { loading.value = false }
-})
+}
 
 
 function gridStyle(item: ChartLayoutItem) {
