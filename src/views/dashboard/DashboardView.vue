@@ -3,7 +3,7 @@ import { ref, reactive, onMounted, onUnmounted, inject, h, defineComponent, reso
 import { Refresh } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import { getDashboard } from '@/api/dashboards'
-import { getChart as getChartApi } from '@/api/charts'
+import { getChartsByIds } from '@/api/charts'
 import type { Dashboard, ChartLayoutItem } from '@/types/dashboard'
 import type { ChartDefinition } from '@/types/chart'
 import GlobalFilters from '@/components/layout/GlobalFilters.vue'
@@ -68,15 +68,16 @@ onMounted(async () => {
     for (const f of dashboard.value.global_filters) {
       filterValues[f.key] = f.default_value
     }
-    // Load chart definitions
+    // Load chart definitions in one batch request
     const chartIds = dashboard.value.layout_config.map((l: ChartLayoutItem) => l.chart_id)
-    for (const cid of chartIds) {
-      if (!charts.value.has(cid)) {
-        try {
-          const chart = await getChartApi(cid)
-          charts.value.set(cid, chart)
-        } catch { /* chart may not exist */ }
-      }
+    const uniqueIds = [...new Set(chartIds)]
+    if (uniqueIds.length) {
+      try {
+        const chartList = await getChartsByIds(uniqueIds)
+        for (const chart of chartList) {
+          charts.value.set(chart.id, chart)
+        }
+      } catch { /* silently ignore */ }
     }
   } finally { loading.value = false }
 })

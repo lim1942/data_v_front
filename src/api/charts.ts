@@ -24,6 +24,11 @@ export function getChart(id: number) {
   return api.get<ChartDefinition>(`/charts/${id}`).then((r) => r.data)
 }
 
+export function getChartsByIds(ids: number[]) {
+  if (!ids.length) return Promise.resolve([])
+  return api.get<ChartDefinition[]>('/charts/batch', { params: { ids: ids.join(',') } }).then((r) => r.data)
+}
+
 export function deleteChart(id: number) {
   return api.delete(`/charts/${id}`)
 }
