@@ -8,7 +8,8 @@ import type { Dashboard, ChartLayoutItem } from '@/types/dashboard'
 import type { ChartDefinition } from '@/types/chart'
 import type { FilterDefinition } from '@/types/filter'
 import { GRID_COLS, ROW_HEIGHT_PX, MIN_W, MIN_H } from '@/config/grid'
-const ROW_HEIGHT_PX_STR = `${ROW_HEIGHT_PX}px`
+const EDITOR_ROW_HEIGHT_PX = Math.max(1, Math.floor(ROW_HEIGHT_PX / 2))
+const ROW_HEIGHT_PX_STR = `${EDITOR_ROW_HEIGHT_PX}px`
 
 const loading = ref(false)
 const dashboards = ref<Dashboard[]>([])
@@ -40,10 +41,10 @@ const draggingIdx = ref(-1)
 const dragOffset = { x: 0, y: 0 }
 
 function getRowHeight(): number {
-  if (!gridRef.value) return ROW_HEIGHT_PX
+  if (!gridRef.value) return EDITOR_ROW_HEIGHT_PX
   const style = getComputedStyle(gridRef.value)
   const h = parseInt(style.gridAutoRows) || parseInt(style.gridTemplateRows)
-  return h > 0 ? h : ROW_HEIGHT_PX
+  return h > 0 ? h : EDITOR_ROW_HEIGHT_PX
 }
 
 async function fetchAll() {

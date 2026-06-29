@@ -1,21 +1,40 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getRoles, createRole, updateRole, deleteRole } from '@/api/roles'
+import {
+  getRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+  getRoleUsers,
+  assignRoleUsers,
+  getRoleDashboards,
+  assignRoleDashboards,
+} from '@/api/roles'
+import { getUsers } from '@/api/users'
+import { getDashboards } from '@/api/dashboards'
 import type { Role } from '@/types/role'
+import type { Dashboard } from '@/types/dashboard'
 
 const loading = ref(false)
 const roles = ref<Role[]>([])
+const userOptions = ref<Array<{ id: number; username: string; email: string | null; is_active: boolean }>>([])
+const dashboardOptions = ref<Dashboard[]>([])
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const dialogLoading = ref(false)
+const relationLoading = ref(false)
 
 const form = reactive({
   id: 0,
   name: '',
   description: '',
   permissions: {} as Record<string, unknown>,
+  user_ids: [] as number[],
+  dashboard_ids: [] as number[],
 })
+
+const roleDashboardCanEditMap = ref<Record<number, boolean>>({})
 
 interface RolePermissionSystem {
   users?: 'r' | 'rw'
@@ -51,7 +70,19 @@ const permissionTree = reactive<PermissionTreeState>({
 async function fetchRoles() {
   loading.value = true
   try {
-    roles.value = await getRoles()
+    const [roleList, usersRes, dashboards] = await Promise.all([
+      getRoles(),
+      getUsers({ page: 1, size: 100 }),
+      getDashboards(),
+    ])
+    roles.value = roleList
+    userOptions.value = usersRes.items.map((u) => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      is_active: u.is_active,
+    }))
+    dashboardOptions.value = dashboards
   } finally {
     loading.value = false
   }
@@ -62,12 +93,15 @@ function openCreate() {
   form.id = 0
   form.name = ''
   form.description = ''
+  form.user_ids = []
+  form.dashboard_ids = []
+  roleDashboardCanEditMap.value = {}
   permissionTree.system = { users: false, roles: false, dashboards: false, charts: false }
   permissionTree.dashboards = { edit: false }
   dialogVisible.value = true
 }
 
-function openEdit(role: Role) {
+async function openEdit(role: Role) {
   isEdit.value = true
   form.id = role.id
   form.name = role.name
@@ -81,6 +115,22 @@ function openEdit(role: Role) {
     charts: perms?.system?.charts === 'rw',
   }
   permissionTree.dashboards = { edit: perms?.dashboards?.edit || false }
+
+  relationLoading.value = true
+  try {
+    const [roleUsers, roleDashboards] = await Promise.all([
+      getRoleUsers(role.id),
+      getRoleDashboards(role.id),
+    ])
+    form.user_ids = roleUsers.map((u) => u.id)
+    form.dashboard_ids = roleDashboards.filter((d) => d.can_view).map((d) => d.dashboard_id)
+    roleDashboardCanEditMap.value = roleDashboards.reduce<Record<number, boolean>>((acc, item) => {
+      acc[item.dashboard_id] = item.can_edit
+      return acc
+    }, {})
+  } finally {
+    relationLoading.value = false
+  }
 
   dialogVisible.value = true
 }
@@ -104,13 +154,29 @@ async function handleSave() {
       description: form.description,
       permissions: buildPermissions(),
     }
+    let roleId = form.id
+
     if (isEdit.value) {
-      await updateRole(form.id, data)
+      await updateRole(roleId, data)
       ElMessage.success('角色更新成功')
     } else {
-      await createRole(data)
+      const created = await createRole(data)
+      roleId = created.id
       ElMessage.success('角色创建成功')
     }
+
+    await Promise.all([
+      assignRoleUsers(roleId, form.user_ids),
+      assignRoleDashboards(
+        roleId,
+        form.dashboard_ids.map((dashboard_id) => ({
+          dashboard_id,
+          can_view: true,
+          can_edit: roleDashboardCanEditMap.value[dashboard_id] || false,
+        })),
+      ),
+    ])
+
     dialogVisible.value = false
     await fetchRoles()
   } finally {
@@ -167,6 +233,25 @@ onMounted(fetchRoles)
           <span>可编辑仪表板</span>
           <el-switch v-model="permissionTree.dashboards.edit" />
         </div>
+
+        <el-divider>角色成员</el-divider>
+        <el-form-item label="该角色包含的用户">
+          <el-select v-model="form.user_ids" multiple filterable style="width: 100%" :loading="relationLoading">
+            <el-option
+              v-for="u in userOptions"
+              :key="u.id"
+              :value="u.id"
+              :label="u.email ? `${u.username} (${u.email})` : u.username"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-divider>可见仪表板</el-divider>
+        <el-form-item label="该角色可查看的仪表板">
+          <el-select v-model="form.dashboard_ids" multiple filterable style="width: 100%" :loading="relationLoading">
+            <el-option v-for="d in dashboardOptions" :key="d.id" :value="d.id" :label="d.name" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
