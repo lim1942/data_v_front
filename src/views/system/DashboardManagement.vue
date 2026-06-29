@@ -8,7 +8,7 @@ import type { Dashboard, ChartLayoutItem } from '@/types/dashboard'
 import type { ChartDefinition } from '@/types/chart'
 import type { FilterDefinition } from '@/types/filter'
 import { GRID_COLS, ROW_HEIGHT_PX, MIN_W, MIN_H } from '@/config/grid'
-const EDITOR_ROW_HEIGHT_PX = Math.max(1, Math.floor(ROW_HEIGHT_PX / 2))
+const EDITOR_ROW_HEIGHT_PX = 20
 const ROW_HEIGHT_PX_STR = `${EDITOR_ROW_HEIGHT_PX}px`
 
 const loading = ref(false)
