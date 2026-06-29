@@ -13,7 +13,7 @@ const themeStore = useThemeStore()
 const router = useRouter()
 
 const toolbarCenterComp = inject<Component | null>('toolbarCenterComp', null)
-const dynamicTitle = inject<Ref<string>>('dynamicTitle', null)
+const dynamicTitle = inject<Ref<string> | null>('dynamicTitle', null)
 
 interface BreadcrumbItem {
   title: string

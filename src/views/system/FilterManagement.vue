@@ -24,6 +24,18 @@ const form = reactive({
   options: '[]',
 })
 
+const filterTypeLabelMap: Record<FilterDefinition['type'], string> = {
+  date_range: '日期范围',
+  date: '单日期',
+  select: '下拉框',
+  input: '文本框',
+}
+
+function getFilterTypeLabel(type: unknown): string {
+  if (typeof type !== 'string') return ''
+  return filterTypeLabelMap[type as FilterDefinition['type']] || type
+}
+
 const showOptions = computed(() => form.type === 'select')
 
 async function fetchFilters() {
@@ -106,7 +118,7 @@ onMounted(fetchFilters)
       <el-table-column prop="label" label="名称" width="140" />
       <el-table-column label="类型" width="100">
         <template #default="{ row }">
-          <el-tag size="small">{{ { date_range: '日期范围', date: '单日期', select: '下拉框', input: '文本框' }[row.type] || row.type }}</el-tag>
+          <el-tag size="small">{{ getFilterTypeLabel(row.type) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="default_value" label="默认值" width="120" />

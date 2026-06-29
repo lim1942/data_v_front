@@ -17,7 +17,33 @@ const form = reactive({
   permissions: {} as Record<string, unknown>,
 })
 
-const permissionTree = reactive({
+interface RolePermissionSystem {
+  users?: 'r' | 'rw'
+  roles?: 'r' | 'rw'
+  dashboards?: 'r' | 'rw'
+  charts?: 'r' | 'rw'
+}
+
+interface RolePermissions {
+  system?: RolePermissionSystem
+  dashboards?: {
+    edit?: boolean
+  }
+}
+
+interface PermissionTreeState {
+  system: {
+    users: boolean
+    roles: boolean
+    dashboards: boolean
+    charts: boolean
+  }
+  dashboards: {
+    edit: boolean
+  }
+}
+
+const permissionTree = reactive<PermissionTreeState>({
   system: { users: false, roles: false, dashboards: false, charts: false },
   dashboards: { edit: false },
 })
@@ -47,14 +73,14 @@ function openEdit(role: Role) {
   form.name = role.name
   form.description = role.description || ''
 
-  const perms = role.permissions || {}
+  const perms = (role.permissions || {}) as RolePermissions
   permissionTree.system = {
     users: perms?.system?.users === 'rw',
     roles: perms?.system?.roles === 'rw',
     dashboards: perms?.system?.dashboards === 'rw',
     charts: perms?.system?.charts === 'rw',
-  } as Record<string, boolean>
-  permissionTree.dashboards = { edit: perms?.dashboards?.edit as boolean || false }
+  }
+  permissionTree.dashboards = { edit: perms?.dashboards?.edit || false }
 
   dialogVisible.value = true
 }
