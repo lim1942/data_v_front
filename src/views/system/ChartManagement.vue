@@ -131,7 +131,7 @@ const form = reactive({
 // Dynamic component compilation (must be after form so componentType can reference form.component_type)
 const componentType = computed(() => form.component_type || 'dynamic')
 provide('componentType', componentType)
-const { component: DynamicComp, error: compileError } = useDynamicVueComponent(previewCode, form.component_type)
+const { component: DynamicComp, error: compileError } = useDynamicVueComponent(previewCode, componentType)
 
 async function fetchCharts() {
   loading.value = true

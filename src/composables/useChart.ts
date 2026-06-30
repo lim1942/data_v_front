@@ -1,4 +1,4 @@
-import { ref, watch, computed, type Component, type MaybeRef, unref } from 'vue'
+import { ref, shallowRef, watch, computed, type Component, type MaybeRef, unref , h, onMounted, onUnmounted} from 'vue'
 import * as echarts from 'echarts'
 import * as vue from 'vue'
 import api from '@/api/index'
@@ -81,6 +81,10 @@ function chartAreaStyle() {
 
 // All globals injected into the sandbox
 const SANDBOX = {
+  h,
+  ref,
+  onMounted,
+  onUnmounted,
   vue,
   axios: api,
   echarts,
@@ -107,12 +111,41 @@ function compileComponent(code: string): Component | null {
   return result as Component
 }
 
+function compileComponentTemplate1(code: string): Component | null {
+  if (!code) return null
+
+  const options = code
+  const factory = new Function(
+    ...GLOBAL_NAMES,
+    `"use strict";\n
+
+return {
+  setup() {
+    const $ = themeColors()
+    const { chartRef, renderChart } = useChartLifecycle()
+
+    onMounted(() => {
+      renderChart(${options})
+    })
+
+    return () => h('div', {ref: chartRef,  style: cardStyle($) })
+  }
+}`,
+  )
+  const result = factory(...Object.values(SANDBOX))
+  if (!result || typeof result !== 'object') {
+    throw new Error('组件代码必须返回一个组件选项对象 (return { ... })')
+  }
+  return result as Component
+}
+
+
 /**
  * Compile stored component_code into a live Vue component.
  * Re-compiles whenever the code string changes.
  */
 export function useDynamicVueComponent(code: MaybeRef<string>, componentType?: MaybeRef<string>) {
-  const component = ref<Component | null>(null)
+  const component = shallowRef<Component | null>(null)
   const error = ref<Error | null>(null)
   const currentType = computed(() => unref(componentType) || 'dynamic')
 
@@ -124,8 +157,14 @@ export function useDynamicVueComponent(code: MaybeRef<string>, componentType?: M
       return
     }
     try {
-      component.value = compileComponent(c)
-      error.value = null
+      if (currentType.value=='template1'){
+          component.value = compileComponentTemplate1(c)
+          error.value = null
+      }else{
+          component.value = compileComponent(c)
+          error.value = null
+      }
+
     } catch (e) {
       component.value = null
       error.value = e as Error
