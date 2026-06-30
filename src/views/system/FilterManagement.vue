@@ -3,6 +3,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getFilters, createFilter, updateFilter, deleteFilter } from '@/api/filters'
 import type { FilterDefinition } from '@/types/filter'
+import { formatDateTime } from '@/utils/date'
 
 const loading = ref(false)
 const filters = ref<FilterDefinition[]>([])
@@ -125,6 +126,12 @@ onMounted(fetchFilters)
       <el-table-column label="选项数" width="80">
         <template #default="{ row }">{{ row.options?.length || 0 }}</template>
       </el-table-column>
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+      </el-table-column>
+      <el-table-column label="更新时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="200">
         <template #default="{ row }">
           <el-button v-permission:rw="'system.filters'" size="small" @click="openEdit(row)">编辑</el-button>
@@ -138,7 +145,7 @@ onMounted(fetchFilters)
       layout="total, prev, pager, next" class="pagination" @change="fetchFilters"
     />
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑过滤器' : '创建过滤器'" width="520px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑过滤器' : '创建过滤器'" width="520px" :close-on-press-escape="false">
       <el-form :model="form" label-position="top">
         <el-row :gutter="16">
           <el-col :span="12">

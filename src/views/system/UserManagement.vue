@@ -5,6 +5,7 @@ import { getUsers, createUser, updateUser, deleteUser, getUserRoles, assignUserR
 import { getRoles } from '@/api/roles'
 import type { User } from '@/types/user'
 import type { Role } from '@/types/role'
+import { formatDateTime } from '@/utils/date'
 
 const loading = ref(false)
 const users = ref<User[]>([])
@@ -141,6 +142,12 @@ onMounted(() => {
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+      </el-table-column>
+      <el-table-column label="更新时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="280">
         <template #default="{ row }">
           <el-button v-permission:rw="'system.users'" size="small" @click="openEdit(row)">编辑</el-button>
@@ -160,7 +167,7 @@ onMounted(() => {
     />
 
     <!-- 用户表单对话框 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '创建用户'" width="480px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '创建用户'" width="480px" :close-on-press-escape="false">
       <el-form :model="form" label-position="top">
         <el-form-item label="用户名" required>
           <el-input v-model="form.username" />
@@ -182,7 +189,7 @@ onMounted(() => {
     </el-dialog>
 
     <!-- 角色分配对话框 -->
-    <el-dialog v-model="roleDialogVisible" title="分配角色" width="420px">
+    <el-dialog v-model="roleDialogVisible" title="分配角色" width="420px" :close-on-press-escape="false">
       <el-checkbox-group v-model="selectedRoles">
         <div v-for="role in roles" :key="role.id" style="margin: 8px 0">
           <el-checkbox :value="role.id">{{ role.name }}</el-checkbox>

@@ -8,6 +8,7 @@ import type { Dashboard, ChartLayoutItem } from '@/types/dashboard'
 import type { ChartDefinition } from '@/types/chart'
 import type { FilterDefinition } from '@/types/filter'
 import { GRID_COLS, MIN_W, MIN_H } from '@/config/grid'
+import { formatDateTime } from '@/utils/date'
 const EDITOR_ROW_HEIGHT_PX = 20
 const ROW_HEIGHT_PX_STR = `${EDITOR_ROW_HEIGHT_PX}px`
 
@@ -288,6 +289,12 @@ onMounted(fetchAll)
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+      </el-table-column>
+      <el-table-column label="更新时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="200">
         <template #default="{ row }">
           <el-button v-permission:rw="'system.dashboards'" size="small" @click="openEdit(row)">编辑</el-button>
@@ -296,63 +303,65 @@ onMounted(fetchAll)
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑仪表板' : '创建仪表板'" width="780px">
-      <el-form :model="form" label-position="top">
-        <el-row :gutter="16">
-          <el-col :span="16">
-            <el-form-item label="名称" required>
-              <el-input v-model="form.name" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="发布">
-              <el-switch v-model="form.is_published" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="2" />
-        </el-form-item>
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑仪表板' : '创建仪表板'" width="100vw" top="0vh" :close-on-press-escape="false">
+      <div class="dialog-content">
+        <el-form :model="form" label-position="top">
+          <el-row :gutter="16">
+            <el-col :span="16">
+              <el-form-item label="名称" required>
+                <el-input v-model="form.name" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="发布">
+                <el-switch v-model="form.is_published" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-form-item label="描述">
+            <el-input v-model="form.description" type="textarea" :rows="2" />
+          </el-form-item>
 
-        <el-divider>图表布局</el-divider>
-        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
-          <el-select v-model="selectedChart" placeholder="选择图表" style="flex: 1; min-width: 160px;" filterable>
-            <el-option v-for="c in charts" :key="c.id" :label="c.title" :value="c.id" />
-          </el-select>
-          <el-input-number v-model="chartW" :min="MIN_W" :max="GRID_COLS" size="small" style="width: 100px" />
-          <span style="font-size: 13px;">宽</span>
-          <el-input-number v-model="chartH" :min="MIN_H" :max="GRID_COLS" size="small" style="width: 100px" />
-          <span style="font-size: 13px;">高</span>
-          <el-button type="primary" @click="addChart" :disabled="!selectedChart">添加</el-button>
-        </div>
-        <div v-if="form.layout_config.length" ref="gridRef" class="layout-grid">
-          <div
-            v-for="(item, idx) in form.layout_config"
-            :key="idx"
-            :style="gridStyle(item)"
-            class="layout-grid-item"
-            :class="{ 'layout-grid-item--resizing': resizingIdx === idx, 'layout-grid-item--dragging': draggingIdx === idx }"
-            @mousedown="startDrag(idx, $event)"
-          >
-            <div class="layout-grid-item__header">
-              <span class="layout-grid-item__title">{{ getChartTitle(item.chart_id) }}</span>
-              <el-button size="small" type="danger" :icon="null" circle @click="removeChart(idx)">
-                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="2" fill="none"/></svg>
-              </el-button>
-            </div>
-            <div class="layout-grid-item__meta">{{ item.w }}×{{ item.h }}</div>
-            <div class="layout-grid-item__handle" @mousedown="startResize(idx, $event)">
-              <svg width="10" height="10" viewBox="0 0 10 10"><path d="M8 2v6H2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          <el-divider>图表布局</el-divider>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+            <el-select v-model="selectedChart" placeholder="选择图表" style="flex: 1; min-width: 160px;" filterable>
+              <el-option v-for="c in charts" :key="c.id" :label="c.title" :value="c.id" />
+            </el-select>
+            <el-input-number v-model="chartW" :min="MIN_W" :max="GRID_COLS" size="small" style="width: 100px" />
+            <span style="font-size: 13px;">宽</span>
+            <el-input-number v-model="chartH" :min="MIN_H" :max="GRID_COLS" size="small" style="width: 100px" />
+            <span style="font-size: 13px;">高</span>
+            <el-button type="primary" @click="addChart" :disabled="!selectedChart">添加</el-button>
+          </div>
+          <div v-if="form.layout_config.length" ref="gridRef" class="layout-grid">
+            <div
+              v-for="(item, idx) in form.layout_config"
+              :key="idx"
+              :style="gridStyle(item)"
+              class="layout-grid-item"
+              :class="{ 'layout-grid-item--resizing': resizingIdx === idx, 'layout-grid-item--dragging': draggingIdx === idx }"
+              @mousedown="startDrag(idx, $event)"
+            >
+              <div class="layout-grid-item__header">
+                <span class="layout-grid-item__title">{{ getChartTitle(item.chart_id) }}</span>
+                <el-button size="small" type="danger" :icon="null" circle @click="removeChart(idx)">
+                  <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                </el-button>
+              </div>
+              <div class="layout-grid-item__meta">{{ item.w }}×{{ item.h }}</div>
+              <div class="layout-grid-item__handle" @mousedown="startResize(idx, $event)">
+                <svg width="10" height="10" viewBox="0 0 10 10"><path d="M8 2v6H2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+              </div>
             </div>
           </div>
-        </div>
-        <div v-else class="layout-empty">暂无图表，请从上方选择一个图表添加</div>
+          <div v-else class="layout-empty">暂无图表，请从上方选择一个图表添加</div>
 
-        <el-divider>全局过滤器</el-divider>
-        <el-select v-model="form.filter_ids" multiple placeholder="选择过滤器" style="width: 100%">
-          <el-option v-for="f in availableFilters" :key="f.id" :label="`${f.label} (${f.key})`" :value="f.id" />
-        </el-select>
-      </el-form>
+          <el-divider>全局过滤器</el-divider>
+          <el-select v-model="form.filter_ids" multiple placeholder="选择过滤器" style="width: 100%">
+            <el-option v-for="f in availableFilters" :key="f.id" :label="`${f.label} (${f.key})`" :value="f.id" />
+          </el-select>
+        </el-form>
+      </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="dialogLoading" @click="handleSave">保存</el-button>
@@ -362,6 +371,30 @@ onMounted(fetchAll)
 </template>
 
 <style scoped lang="scss">
+// Fill viewport without overflow
+:deep(.el-dialog) {
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+:deep(.el-dialog__header) {
+  flex-shrink: 0;
+}
+
+:deep(.el-dialog__body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.dialog-content {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
 .page { max-width: 1200px; }
 
 .page-header {

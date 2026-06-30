@@ -15,6 +15,7 @@ import { getUsers } from '@/api/users'
 import { getDashboards } from '@/api/dashboards'
 import type { Role } from '@/types/role'
 import type { Dashboard } from '@/types/dashboard'
+import { formatDateTime } from '@/utils/date'
 
 const loading = ref(false)
 const roles = ref<Role[]>([])
@@ -204,6 +205,12 @@ onMounted(fetchRoles)
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="name" label="名称" width="180" />
       <el-table-column prop="description" label="描述" />
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+      </el-table-column>
+      <el-table-column label="更新时间" width="160">
+        <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="200">
         <template #default="{ row }">
           <el-button v-permission:rw="'system.roles'" size="small" @click="openEdit(row)">编辑</el-button>
@@ -213,46 +220,48 @@ onMounted(fetchRoles)
     </el-table>
 
     <!-- 角色表单对话框 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑角色' : '创建角色'" width="520px">
-      <el-form :model="form" label-position="top">
-        <el-form-item label="名称" required>
-          <el-input v-model="form.name" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="2" />
-        </el-form-item>
-        <el-divider>系统权限</el-divider>
-        <div class="perm-grid">
-          <div v-for="(_, key) in permissionTree.system" :key="key" class="perm-item">
-            <span>{{ { users: '用户', roles: '角色', dashboards: '仪表板', charts: '图表' }[key] }}</span>
-            <el-switch v-model="(permissionTree.system as Record<string, boolean>)[key]" />
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑角色' : '创建角色'" width="100vw" top="0vh" :close-on-press-escape="false">
+      <div class="dialog-content">
+        <el-form :model="form" label-position="top">
+          <el-form-item label="名称" required>
+            <el-input v-model="form.name" />
+          </el-form-item>
+          <el-form-item label="描述">
+            <el-input v-model="form.description" type="textarea" :rows="2" />
+          </el-form-item>
+          <el-divider>系统权限</el-divider>
+          <div class="perm-grid">
+            <div v-for="(_, key) in permissionTree.system" :key="key" class="perm-item">
+              <span>{{ { users: '用户', roles: '角色', dashboards: '仪表板', charts: '图表' }[key] }}</span>
+              <el-switch v-model="(permissionTree.system as Record<string, boolean>)[key]" />
+            </div>
           </div>
-        </div>
-        <el-divider>仪表板权限</el-divider>
-        <div class="perm-item">
-          <span>可编辑仪表板</span>
-          <el-switch v-model="permissionTree.dashboards.edit" />
-        </div>
+          <el-divider>仪表板权限</el-divider>
+          <div class="perm-item">
+            <span>可编辑仪表板</span>
+            <el-switch v-model="permissionTree.dashboards.edit" />
+          </div>
 
-        <el-divider>角色成员</el-divider>
-        <el-form-item label="该角色包含的用户">
-          <el-select v-model="form.user_ids" multiple filterable style="width: 100%" :loading="relationLoading">
-            <el-option
-              v-for="u in userOptions"
-              :key="u.id"
-              :value="u.id"
-              :label="u.email ? `${u.username} (${u.email})` : u.username"
-            />
-          </el-select>
-        </el-form-item>
+          <el-divider>角色成员</el-divider>
+          <el-form-item label="该角色包含的用户">
+            <el-select v-model="form.user_ids" multiple filterable style="width: 100%" :loading="relationLoading">
+              <el-option
+                v-for="u in userOptions"
+                :key="u.id"
+                :value="u.id"
+                :label="u.email ? `${u.username} (${u.email})` : u.username"
+              />
+            </el-select>
+          </el-form-item>
 
-        <el-divider>可见仪表板</el-divider>
-        <el-form-item label="该角色可查看的仪表板">
-          <el-select v-model="form.dashboard_ids" multiple filterable style="width: 100%" :loading="relationLoading">
-            <el-option v-for="d in dashboardOptions" :key="d.id" :value="d.id" :label="d.name" />
-          </el-select>
-        </el-form-item>
-      </el-form>
+          <el-divider>可见仪表板</el-divider>
+          <el-form-item label="该角色可查看的仪表板">
+            <el-select v-model="form.dashboard_ids" multiple filterable style="width: 100%" :loading="relationLoading">
+              <el-option v-for="d in dashboardOptions" :key="d.id" :value="d.id" :label="d.name" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="dialogLoading" @click="handleSave">保存</el-button>
@@ -262,6 +271,30 @@ onMounted(fetchRoles)
 </template>
 
 <style scoped lang="scss">
+// Fill viewport without overflow
+:deep(.el-dialog) {
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+:deep(.el-dialog__header) {
+  flex-shrink: 0;
+}
+
+:deep(.el-dialog__body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.dialog-content {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
 .page { max-width: 1000px; }
 
 .page-header {
