@@ -12,13 +12,15 @@ const props = defineProps<{
 
 const themeStore = useThemeStore()
 
-// Provide chartId and theme mode so dynamic components can inject them
+// Provide chartId, theme mode and component type so dynamic components can inject them
 provide('chartId', props.chartId)
 provide('themeMode', computed(() => themeStore.mode))
+const componentType = computed(() => props.chartDef?.component_type || 'dynamic')
+provide('componentType', componentType)
 
 // Compile stored component_code into a live Vue component
 const code = computed(() => props.chartDef?.component_code || '')
-const { component: DynamicComp, error: compileError } = useDynamicVueComponent(code)
+const { component: DynamicComp, error: compileError } = useDynamicVueComponent(code, componentType)
 </script>
 
 <template>

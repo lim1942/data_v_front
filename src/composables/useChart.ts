@@ -1,4 +1,4 @@
-import { ref, watch, type Component, type MaybeRef, unref } from 'vue'
+import { ref, watch, computed, type Component, type MaybeRef, unref } from 'vue'
 import * as echarts from 'echarts'
 import * as vue from 'vue'
 import api from '@/api/index'
@@ -111,9 +111,10 @@ function compileComponent(code: string): Component | null {
  * Compile stored component_code into a live Vue component.
  * Re-compiles whenever the code string changes.
  */
-export function useDynamicVueComponent(code: MaybeRef<string>) {
+export function useDynamicVueComponent(code: MaybeRef<string>, componentType?: MaybeRef<string>) {
   const component = ref<Component | null>(null)
   const error = ref<Error | null>(null)
+  const currentType = computed(() => unref(componentType) || 'dynamic')
 
   function tryCompile() {
     const c = unref(code)
@@ -133,7 +134,7 @@ export function useDynamicVueComponent(code: MaybeRef<string>) {
 
   tryCompile()
 
-  watch(() => unref(code), tryCompile)
+  watch([() => unref(code), currentType], tryCompile)
 
   return { component, error }
 }

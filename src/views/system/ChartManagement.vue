@@ -25,7 +25,6 @@ const previewCode = ref('')
 const previewKey = ref(0)
 provide('chartId', 0)
 provide('themeMode', computed(() => themeStore.mode))
-const { component: DynamicComp, error: compileError } = useDynamicVueComponent(previewCode)
 
 // Preview size controls
 // Measure the real dashboard content-area width and divide by GRID_COLS
@@ -116,11 +115,23 @@ return {
   }
 }`
 
+const COMPONENT_TYPE_OPTIONS = [
+  { value: 'dynamic', label: 'Dynamic - 自定义代码' },
+  { value: 'template1', label: 'Template 1' },
+  { value: 'template2', label: 'Template 2' },
+]
+
 const form = reactive({
   id: 0,
   title: '',
+  component_type: 'dynamic' as string,
   component_code: '',
 })
+
+// Dynamic component compilation (must be after form so componentType can reference form.component_type)
+const componentType = computed(() => form.component_type || 'dynamic')
+provide('componentType', componentType)
+const { component: DynamicComp, error: compileError } = useDynamicVueComponent(previewCode, form.component_type)
 
 async function fetchCharts() {
   loading.value = true
@@ -134,7 +145,7 @@ async function fetchCharts() {
 function openCreate() {
   isEdit.value = false
   Object.assign(form, {
-    id: 0, title: '', component_code: '',
+    id: 0, title: '', component_type: 'dynamic', component_code: '',
   })
   previewCode.value = ''
   previewKey.value++
@@ -146,6 +157,7 @@ async function openEdit(chart: ChartDefinition) {
   Object.assign(form, {
     id: chart.id,
     title: chart.title,
+    component_type: chart.component_type || 'dynamic',
     component_code: chart.component_code || '',
   })
   dialogVisible.value = true
@@ -159,9 +171,7 @@ async function handleSave() {
   try {
     const data = {
       title: form.title,
-      data_source: null,
-      options_config: {},
-      component_type: 'dynamic',
+      component_type: form.component_type,
       component_code: form.component_code,
     }
     if (isEdit.value) {
@@ -211,10 +221,10 @@ onMounted(() => {
           <span v-else style="color: var(--color-text-muted); font-size: 12px;">未配置</span>
         </template>
       </el-table-column>
-      <el-table-column label="类型" width="80">
+      <el-table-column label="类型" width="130">
         <template #default="{ row }">
-          <el-tag :type="row.component_type === 'dynamic' ? 'success' : 'info'" size="small">
-            {{ row.component_type === 'dynamic' ? '动态' : '传统' }}
+          <el-tag :type="row.component_type === 'dynamic' ? 'success' : row.component_type === 'template1' ? 'warning' : 'info'" size="small">
+            {{ row.component_type}}
           </el-tag>
         </template>
       </el-table-column>
@@ -243,6 +253,12 @@ onMounted(() => {
           <el-form :model="form" label-position="top" class="editor-form">
             <el-form-item label="标题" required>
               <el-input v-model="form.title" />
+            </el-form-item>
+
+            <el-form-item label="组件类型" required>
+              <el-select v-model="form.component_type" style="width: 100%">
+                <el-option v-for="opt in COMPONENT_TYPE_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
+              </el-select>
             </el-form-item>
 
             <el-form-item label="Vue 组件代码" required class="code-form-item">
